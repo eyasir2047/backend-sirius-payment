@@ -64,6 +64,7 @@ class PaymentInput(BaseModel):
     amount: float
     tag: str  
 
+
 @app.post("/submit-payment/")
 async def submit_payment(data: PaymentInput):
     try:
@@ -73,18 +74,33 @@ async def submit_payment(data: PaymentInput):
             logging.warning(f"❌ Invalid tag: {data.tag}")
             raise HTTPException(status_code=400, detail="Invalid tag. Use HSC26, HSC25, SSC26, or SSC27.")
 
+        # Add debugging info
+        logging.info(f"🔍 Using sheet ID: {SHEET_ID}")
+        
         client = get_sheets_client()
+        logging.info("✅ Google Sheets client created")
+        
         workbook = client.open_by_key(SHEET_ID)
+        logging.info(f"✅ Workbook opened: {workbook.title}")
+        
         sheet_name = TAG_TO_SHEET[data.tag]
+        logging.info(f"🔍 Looking for sheet: {sheet_name}")
 
         try:
             worksheet = workbook.worksheet(sheet_name)
+            logging.info(f"✅ Found worksheet: {worksheet.title}")
         except gspread.exceptions.WorksheetNotFound:
             logging.info(f"🆕 Creating new sheet: {sheet_name}")
             worksheet = workbook.add_worksheet(title=sheet_name, rows="100", cols="4")
             worksheet.append_row(["Teacher Name", "Student Name", "Amount", "Tag"])
+            logging.info("✅ Added header row to new worksheet")
 
-        worksheet.append_row([data.teacher_name, data.student_name, data.amount, data.tag])
+        # Print row data for debugging
+        row_data = [data.teacher_name, data.student_name, data.amount, data.tag]
+        logging.info(f"🔍 Appending row: {row_data}")
+        
+        result = worksheet.append_row(row_data)
+        logging.info(f"✅ Append result: {result}")
         logging.info(f"✅ Payment added to {sheet_name}")
 
         return {"message": f"Payment saved successfully in {sheet_name}", "tag": data.tag}

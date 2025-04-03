@@ -35,9 +35,9 @@ if "GOOGLE_CREDENTIALS" not in os.environ or "GOOGLE_SHEET_ID" not in os.environ
 def get_sheets_client():
     try:
         # Load credentials from the environment variable
-        creds_json = os.environ["GOOGLE_CREDENTIALS"]
-        creds_dict = json.loads(creds_json)  # Convert the string to a dictionary
-        creds = Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+        
+        scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+        creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
         client = gspread.authorize(creds)
         return client
     except Exception as e:
@@ -103,3 +103,23 @@ async def submit_payment(data: PaymentInput):
     except Exception as e:
         logging.error(f"❌ Error processing request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# source venv/bin/activate    
+# pip3 install fastapi uvicorn pandas
+# pip3 freeze > requirements.txt -> This will save all installed dependencies into the file.
+
+# pip3 uninstall fastapi starlette -y
+#pip3 install --upgrade fastapi starlette
+
+# pip3 install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib gspread
+
+# uvicorn main:app --reload
+
+#  uvicorn main:app --reload
+
+# vercel deploy --force
+#run `vercel --prod`
+
+#pip3 install python-dotenv
+
+# pip3 install fastapi uvicorn gspread google-auth google-auth-oauthlib google-auth-httplib2 python-dotenv

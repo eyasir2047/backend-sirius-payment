@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from google.oauth2.service_account import Credentials
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import json
 
 import os
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ load_dotenv()
 # Debugging environment variables
 print("GOOGLE_CREDENTIALS:", os.getenv("GOOGLE_CREDENTIALS"))
 print("GOOGLE_SHEET_ID:", os.getenv("GOOGLE_SHEET_ID"))
+
 
 
 logging.basicConfig(level=logging.INFO)
@@ -35,12 +37,18 @@ if "GOOGLE_CREDENTIALS" not in os.environ or "GOOGLE_SHEET_ID" not in os.environ
     logging.error("❌ Environment variables not found!")
     raise RuntimeError("Environment variables missing. Set GOOGLE_CREDENTIALS and GOOGLE_SHEET_ID")
 
+creds_path = "google_credentials.json"
+if not os.path.exists(creds_path):
+    with open(creds_path, "w") as f:
+        f.write(os.environ["GOOGLE_CREDENTIALS"])
+        
 # Google Sheets Authentication
 def get_google_creds():
     try:
-        creds_json = os.environ["GOOGLE_CREDENTIALS"]
-        creds_dict = json.loads(creds_json)
-        return Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+        return Credentials.from_service_account_file(
+            creds_path, 
+            scopes=["https://www.googleapis.com/auth/spreadsheets"]
+        )
     except Exception as e:
         logging.error(f"❌ Error loading Google credentials: {e}")
         raise HTTPException(status_code=500, detail="Invalid Google credentials")
@@ -63,7 +71,6 @@ class PaymentInput(BaseModel):
     student_name: str
     amount: float
     tag: str  
-
 
 @app.post("/submit-payment/")
 async def submit_payment(data: PaymentInput):
@@ -108,23 +115,3 @@ async def submit_payment(data: PaymentInput):
     except Exception as e:
         logging.error(f"❌ Error processing request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-# source venv/bin/activate    
-# pip3 install fastapi uvicorn pandas
-# pip3 freeze > requirements.txt -> This will save all installed dependencies into the file.
-
-# pip3 uninstall fastapi starlette -y
-#pip3 install --upgrade fastapi starlette
-
-# pip3 install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib gspread
-
-# uvicorn main:app --reload
-
-#  uvicorn main:app --reload
-
-# vercel deploy --force
-#run `vercel --prod`
-
-#pip3 install python-dotenv
-
-# pip3 install fastapi uvicorn gspread google-auth google-auth-oauthlib google-auth-httplib2 python-dotenv

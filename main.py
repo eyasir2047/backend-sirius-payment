@@ -14,8 +14,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Debugging environment variables
-#print("GOOGLE_CREDENTIALS:", os.getenv("GOOGLE_CREDENTIALS"))
-#print("GOOGLE_SHEET_ID:", os.getenv("GOOGLE_SHEET_ID"))
+print("GOOGLE_CREDENTIALS:", os.getenv("GOOGLE_CREDENTIALS"))
+print("GOOGLE_SHEET_ID:", os.getenv("GOOGLE_SHEET_ID"))
 
 
 logging.basicConfig(level=logging.INFO)

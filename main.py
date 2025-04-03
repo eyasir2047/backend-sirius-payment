@@ -6,8 +6,6 @@ from pydantic import BaseModel
 from google.oauth2.service_account import Credentials
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-import json
-
 import os
 from dotenv import load_dotenv
 

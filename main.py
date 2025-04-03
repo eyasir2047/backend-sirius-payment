@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 import gspread
@@ -6,6 +5,18 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from google.oauth2.service_account import Credentials
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from the .env file
+load_dotenv()
+
+# Debugging environment variables
+#print("GOOGLE_CREDENTIALS:", os.getenv("GOOGLE_CREDENTIALS"))
+#print("GOOGLE_SHEET_ID:", os.getenv("GOOGLE_SHEET_ID"))
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -97,3 +108,7 @@ async def submit_payment(data: PaymentInput):
 
 # vercel deploy --force
 #run `vercel --prod`
+
+#pip3 install python-dotenv
+
+# pip3 install fastapi uvicorn gspread google-auth google-auth-oauthlib google-auth-httplib2 python-dotenv

@@ -7,16 +7,12 @@ from google.oauth2.service_account import Credentials
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
-from dotenv import load_dotenv
 
 # Load environment variables from the .env file
 load_dotenv()
 
 # Debugging environment variables
-print("GOOGLE_CREDENTIALS:", os.getenv("GOOGLE_CREDENTIALS"))
 print("GOOGLE_SHEET_ID:", os.getenv("GOOGLE_SHEET_ID"))
-
-
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,25 +31,18 @@ if "GOOGLE_CREDENTIALS" not in os.environ or "GOOGLE_SHEET_ID" not in os.environ
     logging.error("❌ Environment variables not found!")
     raise RuntimeError("Environment variables missing. Set GOOGLE_CREDENTIALS and GOOGLE_SHEET_ID")
 
-creds_path = "google_credentials.json"
-if not os.path.exists(creds_path):
-    with open(creds_path, "w") as f:
-        f.write(os.environ["GOOGLE_CREDENTIALS"])
-        
 # Google Sheets Authentication
-def get_google_creds():
+def get_sheets_client():
     try:
-        return Credentials.from_service_account_file(
-            creds_path, 
-            scopes=["https://www.googleapis.com/auth/spreadsheets"]
-        )
+        # Load credentials from the environment variable
+        creds_json = os.environ["GOOGLE_CREDENTIALS"]
+        creds_dict = json.loads(creds_json)  # Convert the string to a dictionary
+        creds = Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+        client = gspread.authorize(creds)
+        return client
     except Exception as e:
         logging.error(f"❌ Error loading Google credentials: {e}")
         raise HTTPException(status_code=500, detail="Invalid Google credentials")
-
-def get_sheets_client():
-    creds = get_google_creds()
-    return gspread.authorize(creds)
 
 SHEET_ID = os.environ["GOOGLE_SHEET_ID"]
 
@@ -86,6 +75,7 @@ async def submit_payment(data: PaymentInput):
         logging.info("✅ Google Sheets client created")
         
         workbook = client.open_by_key(SHEET_ID)
+        
         logging.info(f"✅ Workbook opened: {workbook.title}")
         
         sheet_name = TAG_TO_SHEET[data.tag]

@@ -1,29 +1,45 @@
+import os
+import json
+import logging
+import gspread
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import gspread
 from google.oauth2.service_account import Credentials
 from fastapi.middleware.cors import CORSMiddleware
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this in production to be more specific
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Check if env variables exist
+if "GOOGLE_CREDENTIALS" not in os.environ or "GOOGLE_SHEET_ID" not in os.environ:
+    logging.error("❌ Environment variables not found!")
+    raise RuntimeError("Environment variables missing. Set GOOGLE_CREDENTIALS and GOOGLE_SHEET_ID")
+
 # Google Sheets Authentication
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-CREDS = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
-client = gspread.authorize(CREDS)
+def get_google_creds():
+    try:
+        creds_json = os.environ["GOOGLE_CREDENTIALS"]
+        creds_dict = json.loads(creds_json)
+        return Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets"])
+    except Exception as e:
+        logging.error(f"❌ Error loading Google credentials: {e}")
+        raise HTTPException(status_code=500, detail="Invalid Google credentials")
 
-# Google Sheet ID
-SHEET_ID = "1UuVLs6AR76KqAfbGX-rkmrr8tiPil3OY_rVtr6xTLN4"  # Change to your actual Google Sheet ID
-workbook = client.open_by_key(SHEET_ID)
+def get_sheets_client():
+    creds = get_google_creds()
+    return gspread.authorize(creds)
 
-# Predefined mapping of tags to sheet names
+SHEET_ID = os.environ["GOOGLE_SHEET_ID"]
+
 TAG_TO_SHEET = {
     "HSC26": "Sheet1",
     "HSC25": "Sheet2",
@@ -31,35 +47,39 @@ TAG_TO_SHEET = {
     "SSC27": "Sheet4"
 }
 
-# Define the request model
 class PaymentInput(BaseModel):
     teacher_name: str
     student_name: str
     amount: float
-    tag: str  # Example: HSC26, HSC25, SSC26, SSC27
+    tag: str  
 
 @app.post("/submit-payment/")
 async def submit_payment(data: PaymentInput):
     try:
-        # Get the corresponding sheet name
+        logging.info(f"✅ Received data: {data}")
+
         if data.tag not in TAG_TO_SHEET:
+            logging.warning(f"❌ Invalid tag: {data.tag}")
             raise HTTPException(status_code=400, detail="Invalid tag. Use HSC26, HSC25, SSC26, or SSC27.")
-        
+
+        client = get_sheets_client()
+        workbook = client.open_by_key(SHEET_ID)
         sheet_name = TAG_TO_SHEET[data.tag]
 
-        # Check if worksheet exists, otherwise create it
         try:
             worksheet = workbook.worksheet(sheet_name)
         except gspread.exceptions.WorksheetNotFound:
+            logging.info(f"🆕 Creating new sheet: {sheet_name}")
             worksheet = workbook.add_worksheet(title=sheet_name, rows="100", cols="4")
-            worksheet.append_row(["Teacher Name", "Student Name", "Amount", "Tag"])  # Add headers
+            worksheet.append_row(["Teacher Name", "Student Name", "Amount", "Tag"])
 
-        # Append data to the selected worksheet
         worksheet.append_row([data.teacher_name, data.student_name, data.amount, data.tag])
+        logging.info(f"✅ Payment added to {sheet_name}")
 
         return {"message": f"Payment saved successfully in {sheet_name}", "tag": data.tag}
-    
+
     except Exception as e:
+        logging.error(f"❌ Error processing request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # source venv/bin/activate    
@@ -74,3 +94,6 @@ async def submit_payment(data: PaymentInput):
 # uvicorn main:app --reload
 
 #  uvicorn main:app --reload
+
+# vercel deploy --force
+#run `vercel --prod`
